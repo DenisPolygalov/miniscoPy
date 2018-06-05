@@ -130,14 +130,18 @@ class CMuPaMovieCV(CMuPaMovie):
             print("Total number of frames: %d" % self.na_ends[-1])
         #
     #
-    def _read_frame(self, file_idx, frame_num):
+    def _seek_rel(self, file_idx, frame_num):
         b_ret = False
         if file_idx  >= len(self.t_file_names): return b_ret
         if frame_num >= self.df_info.at[file_idx, 'frames']: return b_ret
-        
+        return self.t_vid_streams[file_idx].set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+    #
+    def _read_frame(self, file_idx, frame_num, b_do_seek=True):
+        b_ret = False
         # set position to read the requested frame from requested video file
-        b_ret = self.t_vid_streams[file_idx].set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-        if not b_ret: return b_ret
+        if b_do_seek:
+            b_ret = self._seek_rel(file_idx, frame_num)
+            if not b_ret: return b_ret
         
         # try to read the frame
         while True:
@@ -148,19 +152,37 @@ class CMuPaMovieCV(CMuPaMovie):
                 self.i_curr_abs_frame_num = self.rel2abs(self.i_curr_file_idx, self.i_curr_rel_frame_num)
                 return b_ret
             else:
-                print("WARNING: waiting for the cv2.read()...")
-                cv2.waitKey(1000)
+                # print("WARNING: waiting for the cv2.read()...")
+                # cv2.waitKey(1000)
+                b_ret = self._seek_rel(file_idx, frame_num)
+                if not b_ret: return b_ret
             #
         #
         return b_ret
     #
-    def read_frame(self, abs_frame_num):
+    def seek(self, abs_frame_num):
+        b_ret = False
         rel_file_idx, rel_frame_num = self.abs2rel(abs_frame_num)
-        return self._read_frame(rel_file_idx, rel_frame_num)
+        if rel_file_idx  >= len(self.t_file_names): return b_ret
+        if rel_frame_num >= self.df_info.at[rel_file_idx, 'frames']: return b_ret
+        return self.t_vid_streams[rel_file_idx].set(cv2.CAP_PROP_POS_FRAMES, rel_frame_num)
+    #
+    def read_frame(self, abs_frame_num):
+        """
+        Read particular frame nubmer into self.na_frame
+        This method is slow because seek() is called every time.
+        """
+        rel_file_idx, rel_frame_num = self.abs2rel(abs_frame_num)
+        return self._read_frame(rel_file_idx, rel_frame_num, b_do_seek=True)
     #
     def read_next_frame(self):
+        """
+        Read next frame at the current position.
+        This method is fast.
+        You can set current position once by using seek(frame_number).
+        """
         rel_file_idx, rel_frame_num = self.abs2rel(self.i_next_abs_frame_num)
-        b_ret = self._read_frame(rel_file_idx, rel_frame_num)
+        b_ret = self._read_frame(rel_file_idx, rel_frame_num, b_do_seek=False)
         if b_ret == True:
             self.i_next_abs_frame_num += 1
         return b_ret
