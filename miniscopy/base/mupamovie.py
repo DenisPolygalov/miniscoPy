@@ -187,4 +187,11 @@ class CMuPaMovieCV(CMuPaMovie):
             self.i_next_abs_frame_num += 1
         return b_ret
     #
+    def get_frame_stat(self):
+        return "curr_abs_frame_num: %d\t curr_file_idx: %d\t curr_rel_frame_num: %d" % ( \
+            self.i_curr_abs_frame_num, \
+            self.i_curr_file_idx, \
+            self.i_curr_rel_frame_num \
+        )
+    #
 #
