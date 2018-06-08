@@ -22,7 +22,7 @@ along with this program; if not, a copy is available at
 http://www.fsf.org/
 """
 
-def enum_video_files_dir(target_source, s_wildcard):
+def enum_video_files_dir(target_source, s_wildcard, b_verbose=False):
     """
     See enum_video_files() for details.
     """
@@ -34,14 +34,18 @@ def enum_video_files_dir(target_source, s_wildcard):
     # l_file_numbers = [1, 10, 2, ...]
     
     if len(l_file_names) == 0:
-        raise IOError("No matching files found")
+        raise OSError("No matching files found in: %s" % target_source)
     #
     for s_fname in l_file_names:
         if not os.path.isfile(s_fname):
-            raise IOError("Not a regular file: %s" % s_fname)
+            raise OSError("Not a regular file: %s" % s_fname)
         #
         if not os.access(s_fname, os.R_OK):
-            raise IOError("Access denied for file: %s" % s_fname)
+            raise OSError("Access denied for file: %s" % s_fname)
+        #
+        fstat_info = os.stat(s_fname)
+        if fstat_info.st_size == 0:
+            raise OSError("The file is empty: %s" % s_fname)
         #
         # os.path.split(s_fname)[-1] will be only the file name, i.e. 'mcCam2.avi' etc.
         l_numbers_in_fname = re.findall(r'\d+', os.path.split(s_fname)[-1])
@@ -61,14 +65,14 @@ def enum_video_files_dir(target_source, s_wildcard):
     if len(l_sorted_file_numbers) >= 2:
         l_fnum_diff = [j - i for i, j in zip(l_sorted_file_numbers[:-1], l_sorted_file_numbers[1:])]
         if sum(l_fnum_diff) != len(l_fnum_diff):
-            raise ValueError("Missing files (holes in numbering) found!")
+            raise ValueError("Missing files (holes in numbering) found in: %s" % target_source)
         #
     #
     # another method
     if max(l_sorted_file_numbers) != len(l_sorted_file_names):
-        raise ValueError("Missing files (length mismatch) found!")
+        raise ValueError("Missing files (length mismatch) found in: %s" % target_source)
     #
-    if __debug__:
+    if b_verbose:
         for i in range(len(l_file_names)):
             print("DEBUG: %s\t%d\t%s" % (l_file_names[i], l_file_numbers[i], l_sorted_file_names[i]))
         #
@@ -81,7 +85,7 @@ def enum_video_files_txt(target_source):
     See enum_video_files() for details.
     """
     if not os.access(target_source, os.R_OK):
-        raise IOError("Access denied for file: %s" % target_source)
+        raise OSError("Access denied for file: %s" % target_source)
     #
     l_out_file_names = []
     with open(target_source, 'r') as f:
@@ -89,13 +93,13 @@ def enum_video_files_txt(target_source):
             s_fname = s_fname.strip()
             if len(s_fname) == 0: continue
             if s_fname.startswith('#'): continue
-            if not os.path.isfile(s_fname): raise IOError("Not a regular file: %s" % s_fname)
-            if not os.access(s_fname, os.R_OK): raise IOError("Access denied for file: %s" % s_fname)
+            if not os.path.isfile(s_fname): raise OSError("Not a regular file: %s" % s_fname)
+            if not os.access(s_fname, os.R_OK): raise OSError("Access denied for file: %s" % s_fname)
             l_out_file_names.append(s_fname)
         #
     #
     if len(l_out_file_names) == 0:
-        raise IOError("No input files found")
+        raise OSError("No input files found in: %s" % target_source)
     #
     return tuple(l_out_file_names)
 #
@@ -121,7 +125,7 @@ def enum_video_files(target_source, s_wildcard):
         return enum_video_files_txt(target_source)
     #
     else:
-        raise ValueError("Unknown target. It must be an existed directory or file name")
+        raise ValueError("Unknown target type: %s" % repr(target_source))
     #
 #
 

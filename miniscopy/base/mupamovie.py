@@ -78,7 +78,7 @@ class CMuPaMovieCV(CMuPaMovie):
     The file names in the tuple must be in correct temporal order.
     For details refer to documentation for the base class CMuPaMovie()
     """
-    def __init__(self, t_file_names):
+    def __init__(self, t_file_names, b_verbose=False):
         super().__init__(t_file_names)
         
         # to be turned into tuples at the end of this constructor
@@ -88,11 +88,16 @@ class CMuPaMovieCV(CMuPaMovie):
         for idx in range(len(self.t_file_names)):
             self.df_info.loc[idx, 'file_name'] = self.t_file_names[idx]
             
+            i_read_try_cnt = 0
             hCap = cv2.VideoCapture(self.t_file_names[idx])
             while not hCap.isOpened():
                 hCap = cv2.VideoCapture(self.t_file_names[idx])
                 cv2.waitKey(1000)
-                print("WARNING: waiting for the cv2.VideoCapture()...")
+                # print("WARNING: waiting for the cv2.VideoCapture()...")
+                i_read_try_cnt += 1
+                if i_read_try_cnt >= 10:
+                    raise ValueError("Unable to read frame from: %s" % self.t_file_names[idx])
+                #
             #
             self.df_info.loc[idx, 'duration'] = hCap.get(cv2.CAP_PROP_FRAME_COUNT)
             self.df_info.loc[idx, 'frames']   = int(hCap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -125,9 +130,8 @@ class CMuPaMovieCV(CMuPaMovie):
         # [1000, 2000, 3000, 4000, 4963], read only!
         self.na_ends = np.array(self.df_info['end'], dtype=np.int32)
         
-        if __debug__:
+        if b_verbose:
             print(self.df_info)
-            print("Total number of frames: %d" % self.na_ends[-1])
         #
     #
     def _seek_rel(self, file_idx, frame_num):
