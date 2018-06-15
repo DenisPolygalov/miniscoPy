@@ -379,7 +379,7 @@ class CMoCorrRigid(object):
         if b_verbose:
             # NOTE: self.oc_corrector.f_f2t_xcorr is the value BEFORE correction
             # After correction it become 0.999999 or even 1.0
-            print("frame2template_xcorr= %.9f shift= [%.4f, %.4f]" % ( \
+            print("frame2template_xcorr = %.9f shift=[ %+.4f, %+.4f ]" % ( \
                 self.oc_corrector.f_f2t_xcorr, \
                 self.oc_corrector.l_shift[0], \
                 self.oc_corrector.l_shift[1]) \
