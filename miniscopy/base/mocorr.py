@@ -6,6 +6,15 @@ import numpy as np
 import cv2
 
 """
+Heavily based on:
+miniscoPy (Guillaume Viejo):
+https://github.com/PeyracheLab/miniscoPy
+and CaImAn (Andrea Giovannucci et al.)
+https://github.com/flatironinstitute/CaImAn
+https://github.com/flatironinstitute/CaImAn/graphs/contributors
+"""
+
+"""
 Copyright (C) 2018 Denis Polygalov,
 Laboratory for Circuit and Behavioral Physiology,
 RIKEN Center for Brain Science, Saitama, Japan.
@@ -254,6 +263,7 @@ class CMoCorrFrameWiseRigid(object):
         top_left = cv2.minMaxLoc(res)[3]
         sh_y, sh_x = top_left
 
+        # FROM PYFLUO https://github.com/bensondaled/pyfluo
         if (0 < top_left[1] < 2 * self.ms_h - 1) & (0 < top_left[0] < 2 * self.ms_w - 1):
             # if max is internal, check for subpixel shift using gaussian
             # peak registration
