@@ -2,6 +2,7 @@
 
 import os, sys, time
 import collections
+import warnings
 import numpy as np
 import cv2
 
@@ -248,6 +249,7 @@ class CMoCorrFrameWiseRigid(object):
     related to input template frame.
     """
     def __init__(self, max_shift_w=25, max_shift_h=25):
+        warnings.warn("FIXME: This class does not produce good enough output")
         self.ms_w, self.ms_h = max_shift_w, max_shift_h
         # main data exchange interface for this class
         self.na_out          = None # output frame
@@ -300,6 +302,7 @@ class CMoCorrRigid(object):
     Perform rigid motion correction of a sequence of input frames i.e. a movie.
     """
     def __init__(self, oc_movie, d_param):
+        warnings.warn("FIXME: This class does not produce good enough output")
         # main data exchange interface for this class
         self.l_shifts_buf = []
         self.l_xcorrs_buf = []
