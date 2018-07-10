@@ -73,6 +73,13 @@ class CTiledImage(object):
             #
         #
     #
+    def set_all(self, na_data):
+        if self._b_have_color_data:
+            self._na_data[:,:,:] = na_data[:,:,:]
+        else:
+            self._na_data[:,:] = na_data[:,:]
+        #
+    #
     def __str__(self):
         l_out = []
         l_row = []
@@ -116,5 +123,14 @@ if __name__ == '__main__':
     #
     for ix, iy in np.ndindex(oc_timg.shape):
         print( oc_timg[ix, iy] )
+        print()
+    #
+    
+    na_ones = np.ones(i_nrows * i_ncols, dtype=np.int).reshape(i_nrows, i_ncols)
+    oc_timg.set_all(na_ones)
+    
+    for ix, iy in np.ndindex(oc_timg.shape):
+        print( oc_timg[ix, iy] )
+        print()
     #
 #
