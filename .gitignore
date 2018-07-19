@@ -10,3 +10,6 @@ oasis.cpp
 ./.ipynb_checkpoints/*
 *.hdf5
 *.avi
+*.so
+.DS_Store
+._*
