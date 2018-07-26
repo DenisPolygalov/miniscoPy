@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os, sys
-import numpy as np
+import numpy as np, cv2
 
 """
 Copyright (C) 2018 Lilia Evgeniou,
