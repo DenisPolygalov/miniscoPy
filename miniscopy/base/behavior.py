@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import os, sys
-import numpy as np, cv2
+import cv2
+import numpy as np
 
 """
 Copyright (C) 2018 Lilia Evgeniou,
@@ -94,11 +95,12 @@ class CBehavPositionDetector(object):
         # used for detection
         self.i_c_channel = d_param["color_channel"]  # = 2
 
-        # will create list of lists with all coordinates of each frame
-        # to be made into numpy array
+        self.l_call_cnt = []
+        self.l_kp_id    = []
+        self.l_kp_size  = []
         self.l_position = []
-        
-        self.call_cnt = 0
+
+        self.i_call_cnt = 0
     #
 
 
@@ -108,37 +110,76 @@ class CBehavPositionDetector(object):
         by detecting blob on "red" gray scale image.
         :param na_input: numpy array of frame image
         :param detector: cv2.SimpleBlobDetector whose parameters are already defined
-        :return: the coordinates of the center of the LED light circle.
+        :return: the best estimated coordinates of the center of the LED light circle.
                  (None, None) if no LED light detected
+        Function also changes self.l_call_cnt, self.l_kp_id, self.l_kp_size,
+        self.l_position, and self.i_call_cnt (adds 1 to it).
+        - appends all possible keypoints found into lists.
+        Later on, will make ndarray with a matrix as follows:
+            ______________________________________________________
+            | l_call_cnt | l_kp_id | l_kp_size | x_coor | y_coor |
+            |     0      |    0    |   20.4    |  15.8  |  19.3  | <- only 1 kp found
+            |     1      |    0    |   25.2    |  12.4  |  20.5  | <- 2 kps found
+            |     1      |    1    |   27.5    |  50.3  |  94.1  |
+            |     2      |    0    |   NaN     |  NaN   |  NaN   | <- handles no kp found
+            .            .         .           .        .        .
+            .            .         .           .   l_position    .
+            .            .         .           .        .        .
         """
-
-        self.call_cnt += 1
 
         # make the LED stand out brighter by converting to red gray scale
         # finds key points
         keypoints = self.oc_blob_detector.detect(na_input[:, :, self.i_c_channel])
 
-        # if no key points are found, will return (None, None)
+        # if no key points are found, will append what is needed into lists,
+        # and will return (None, None)
         if len(keypoints) == 0:
             if b_verbose:
                 print("WARNING: failed to detect any key points. Check your detection parameters.")
+            self.l_call_cnt.append(self.i_call_cnt)
+            self.l_kp_id.append(0)
+            self.l_kp_size.append(np.nan)
             self.l_position.append([np.nan, np.nan])
+            # add 1 to call_cnt, which keeps track of frame number
+            self.i_call_cnt += 1
             return (None, None)
 
         if b_verbose:
-            for kp_idx, kp in enumerate(keypoints):
+            for idx_kp, kp in enumerate(keypoints):
                 print("call_id=%i\tkeypoint: id=%i\tsize=%.3f\tx=%.3f\ty=%.3f" % \
-                ( self.call_cnt, kp_idx, kp.size, kp.pt[0], kp.pt[1]) )
+                      (self.i_call_cnt, idx_kp, kp.size, kp.pt[0], kp.pt[1]))
 
-        for kp in keypoints:
+        # keeps one set of estimated coordinates (in this case, first keypoint)
+        kp_xcoor, kp_ycoor = None, None
+        # finds keypoints of right size,
+        # and appends all into lists if more than one found.
+        for idx_kp, kp in enumerate(keypoints):
             if self.i_min_kp_sz < kp.size < self.i_max_kp_sz:
+                # keeps set of estimated coordinates
+                if idx_kp == 0:
+                    kp_xcoor = kp.pt[0]
+                    kp_ycoor = kp.pt[1]
+                # appends to lists
+                self.l_call_cnt.append(self.i_call_cnt)
+                self.l_kp_id.append(idx_kp)
+                self.l_kp_size.append(kp.size)
                 self.l_position.append([kp.pt[0], kp.pt[1]])
-                return (kp.pt[0], kp.pt[1])
 
-        # A keypoint of the right size is not found.
-        # Append [np.nan np.nan] to the self.l_position
-        # and return (None, None)
+        # returning when keypoints found
+        if (kp_xcoor, kp_ycoor) != (None, None):
+            # add 1 to call_cnt, which keeps track of frame number
+            self.i_call_cnt += 1
+            return (kp_xcoor, kp_ycoor)
+
+        # returning when a keypoint of the right size is not found.
+        # appends what is needed to lists,
+        # and returns (None, None)
+        self.l_call_cnt.append(self.i_call_cnt)
+        self.l_kp_id.append(0)
+        self.l_kp_size.append(np.nan)
         self.l_position.append([np.nan, np.nan])
+        # add 1 to call_cnt, which keeps track of frame number
+        self.i_call_cnt   += 1
         return (None, None)
     #
 
@@ -246,6 +287,11 @@ if __name__ == '__main__':
 
         i_brake += 1
         if i_brake >= 500: break
+
+    print(np.column_stack((oc_pos_det.l_call_cnt,
+                           oc_pos_det.l_kp_id,
+                           oc_pos_det.l_kp_size,
+                           oc_pos_det.l_position)))
 
     # plot the x and y axes for all frames
     fig = plt.figure()
