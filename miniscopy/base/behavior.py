@@ -3,6 +3,7 @@
 import os, sys
 import cv2
 import numpy as np
+import warnings
 
 """
 Copyright (C) 2018 Lilia Evgeniou,
@@ -234,6 +235,98 @@ class CBehavPositionDetector(object):
         return na_input
     #
 #
+
+
+def find_segments(na_x, f_thr_amp, i_thr_len):
+    """
+    Finds indices of 'na_x' where values of 'na_x' are
+    equal or above the 'amplitude threshold' value 'f_thr_amp'
+    AND equal or longer than the 'duration threshold' value 'i_thr_len'.
+    :param na_x: ndarray of one dimension
+    :param f_thr_amp: amplitude threshold value (float)
+    :param i_thr_len: length threshold - must be specified in number
+                      of elements of na_x (2,3,4, ... X.size - 1)
+    :return: M row x 2 column ndarray of beginning and ending (+1) indices, -
+             so called 'segments' where M is the number of segments.
+             * To remember: end idx + 1 because Python range excludes last number
+             ________________________
+             | beg idx  | end idx  |    <- segment 1
+             |          |          |    <- segment 2
+             .          .          .    <- ...
+    """
+
+    # just in case, makes na_x in 1 "row" format: array([a, b, c, ...])
+    na_x = np.squeeze(na_x)
+
+    if len(na_x.shape) != 1:
+        raise TypeError("find_segments: na_x must be a ndarray of single row or column")
+
+    if np.isnan(na_x).any():
+        raise TypeError("find_segments: na_x contain NaN values")
+
+    if (na_x <= f_thr_amp).all():
+        raise ValueError("find_segments: ﻿amplitude threshold (f_thr_amp) is too high")
+
+    if (na_x >= f_thr_amp).all():
+        raise ValueError("find_segments: ﻿amplitude threshold (f_thr_amp) is too low")
+
+    i_thr_len = np.int(np.floor(i_thr_len))
+
+    if i_thr_len < 2:
+        raise ValueError("find_segments: length threshold (i_thr_len) is too short (less than 2)")
+
+    if i_thr_len > (na_x.size - 1):
+        raise ValueError("find_segments: ﻿length threshold (i_thr_len) is too long (longer than length(X) - 1)")
+
+    # special case when thr_amp is exactly equal to min(x)
+    if (na_x >= f_thr_amp).all():
+        na_segments = np.array([0, len(na_x)], dtype=np.int64)
+        warnings.warn("find_segments: all values are equal or above the f_thr_amp value")
+        return na_segments
+
+    # Ideally, we need to find indices of all continuous chunks of ones longer or equal to i_thr_len
+    # In order to detect 0 -> 1 and 1 -> 0 transitions in x1, we use np.diff()
+
+    na_x_gt_thr_amp_bool = na_x >= f_thr_amp  # boolean ndarray: where na_x is greater than f_thr_amp
+    na_x_gt_thr_amp      = np.array(list(map(np.int, na_x_gt_thr_amp_bool)))  # boolean converted to 0s and 1s
+    na_diff_x            = np.diff(na_x_gt_thr_amp)  # array of differences
+                                                     # 0: no change; 1: increase; -1: decrease
+    # example:
+    # na_x:                  array([ 1,  3,  4,  6,  9, 10,  5,  3,  1])
+    # f_thr_amp:             4
+    # na_x_gt_thr_amp_bool:  array([False, False,  True,  True,  True,  True,  True, False, False])
+    # na_x_gt_thr_amp:       array([0, 0, 1, 1, 1, 1, 1, 0, 0])
+    # na_diff_x:             array([ 0,  1,  0,  0,  0,  0, -1,  0])
+
+    # filter na_x by amplitude
+    # slicing is done in the Python way: end is 1 more than the actual end index
+
+    if   na_x[0] <  f_thr_amp and na_x[-1] <  f_thr_amp:  # 00111100 (for na_x_gt_thr_amp)
+        na_begs = np.where(na_diff_x > 0)[0] + 1
+        na_ends = np.where(na_diff_x < 0)[0] + 1
+
+    elif na_x[0] >= f_thr_amp and na_x[-1] >= f_thr_amp:  # 11000011
+        na_begs = np.append(0, np.where(na_diff_x > 0)[0] + 1)
+        na_ends = np.append(np.where(na_diff_x < 0)[0] + 1, na_x.size)
+
+    elif na_x[0] >= f_thr_amp and na_x[-1] <  f_thr_amp:  # 11011000
+        na_begs = np.append(0, np.where(na_diff_x > 0)[0] + 1)
+        na_ends = np.where(na_diff_x < 0)[0] + 1
+
+    elif na_x[0] <  f_thr_amp and na_x[-1] >= f_thr_amp:  # 00011011
+        na_begs = np.where(na_diff_x > 0)[0] + 1
+        na_ends = np.append(np.where(na_diff_x < 0)[0] + 1, na_x.size)
+
+    else:
+        raise ValueError("find_segments: algorithm error (1)")  # should never happen
+
+    if len(na_begs) != len(na_ends):
+        raise ValueError("find_segments: algorithm error (2)")
+
+    na_diff_I = np.where(((na_ends - na_begs + 1) >= (i_thr_len + 1)) == True)[0]
+    na_segments = np.column_stack((na_begs[na_diff_I], na_ends[na_diff_I]))  # ndarray of shape (M, 2) where M = number of segments
+
+    return na_segments.astype(np.int64)
 
 
 if __name__ == '__main__':
