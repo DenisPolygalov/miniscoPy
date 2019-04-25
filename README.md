@@ -1,7 +1,6 @@
-<img src="https://avatars2.githubusercontent.com/u/26169608?s=400&u=c95268d6ce14e5fa4e4c94ec51888042c2245c66&v=4" width="150" align="right">
+__This fork is archived. All contributions to this fork are now available in the CaFFlow project:__
 
-miniscoPy
-=====
+https://github.com/DenisPolygalov/CaFFlow
 
 
 A package to analyse calcium imaging data recorded with the __[Miniscope](http://miniscope.org)__. 
